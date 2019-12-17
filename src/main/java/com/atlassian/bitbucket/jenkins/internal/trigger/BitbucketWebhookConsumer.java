@@ -15,6 +15,9 @@ import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
+import jenkins.plugins.git.GitBranchSCMHead;
+import jenkins.plugins.git.GitBranchSCMRevision;
+import jenkins.scm.api.*;
 import jenkins.triggers.SCMTriggerItem;
 import org.eclipse.jgit.transport.RemoteConfig;
 
@@ -80,6 +83,8 @@ public class BitbucketWebhookConsumer {
                     .filter(triggerDetails -> hasMatchingRepository(refChangedDetails, triggerDetails.getJob()))
                     .peek(triggerDetails -> LOGGER.fine("Triggering " + triggerDetails.getJob().getFullDisplayName()))
                     .forEach(triggerDetails -> triggerDetails.getTrigger().trigger(requestBuilder.build()));
+            //fire the head event to indicate to the SCMSources that changes have happened.
+            BitbucketSCMHeadEvent.fireNow(new BitbucketSCMHeadEvent(SCMEvent.Type.UPDATED, event, event.getRepository().getSlug()));
         }
     }
 
@@ -231,6 +236,33 @@ public class BitbucketWebhookConsumer {
 
         public BitbucketWebhookTrigger getTrigger() {
             return trigger;
+        }
+    }
+
+    private static class BitbucketSCMHeadEvent extends SCMHeadEvent<RefsChangedWebhookEvent> {
+
+        public BitbucketSCMHeadEvent(Type type, RefsChangedWebhookEvent payload, String origin) {
+            super(type, payload, origin);
+        }
+
+        @Override
+        public String getSourceName() {
+            return getPayload().getRepository().getName();
+        }
+
+        @Override
+        public Map<SCMHead, SCMRevision> heads(SCMSource source) {
+            return getPayload().getChanges().stream().collect(Collectors.toMap(change -> new GitBranchSCMHead(change.getRef().getDisplayId()), change -> new GitBranchSCMRevision(new GitBranchSCMHead(change.getRef().getDisplayId()), change.getToHash())));
+        }
+
+        @Override
+        public boolean isMatch(SCMNavigator navigator) {
+            return false;
+        }
+
+        @Override
+        public boolean isMatch(SCM scm) {
+            return false; //see comment on the overriden method
         }
     }
 }

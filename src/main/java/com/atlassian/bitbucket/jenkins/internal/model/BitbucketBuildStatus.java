@@ -1,11 +1,13 @@
 package com.atlassian.bitbucket.jenkins.internal.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BitbucketBuildStatus {
 
     private final String description;
@@ -14,7 +16,7 @@ public class BitbucketBuildStatus {
     private final BuildState state;
     private final String url;
 
-    private BitbucketBuildStatus(@Nullable String description, String key, @Nullable String name, BuildState state,
+    public BitbucketBuildStatus(@Nullable @JsonProperty("description") String description, @JsonProperty("key") String key, @Nullable @JsonProperty("name") String name, @JsonProperty("state") BuildState state,
                                  String url) {
         this.description = description;
         this.key = requireNonNull(key, "key");
