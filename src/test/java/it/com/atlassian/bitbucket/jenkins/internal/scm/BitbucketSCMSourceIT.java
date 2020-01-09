@@ -52,9 +52,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static it.com.atlassian.bitbucket.jenkins.internal.util.BitbucketUtils.*;
-import static org.junit.Assert.assertEquals;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 public class BitbucketSCMSourceIT {
 
@@ -168,7 +167,7 @@ public class BitbucketSCMSourceIT {
         gitRepo.push().setCredentialsProvider(cr).call();
 
         while (lastSuccessfulBuild.equals(project.getLastSuccessfulBuild())) {
-            System.out.println("Waiting for branch dettection to run");
+            System.out.println("Waiting for branch detection to run");
             Thread.sleep(200);
         }
 
@@ -197,12 +196,13 @@ public class BitbucketSCMSourceIT {
         };
         BitbucketPage<BitbucketBuildStatus> statues = objectMapper.readValue(response.asString(), pageRef);
 
-        while (statues.getSize() < 1 || statues.getValues().stream().allMatch(status -> "SUCCSESSFUL".equals(status.getState()))) {
+        while (statues.getSize() < 1 || !statues.getValues().stream().allMatch(status -> "SUCCESSFUL".equals(status.getState()))) {
 
             System.out.println("Waiting for build status become successful");
             Thread.sleep(200);
             response = buildStatusSpec.get(commitId);
             statues = objectMapper.readValue(response.asString(), pageRef);
+            assertTrue("Build was not successful", statues.getValues().stream().noneMatch(status -> "FAILED".equals(status.getState())));
         }
 
         jobs = project.getAllItems();
