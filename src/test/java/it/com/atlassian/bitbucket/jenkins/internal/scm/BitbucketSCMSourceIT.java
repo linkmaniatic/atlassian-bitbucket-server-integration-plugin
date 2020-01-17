@@ -61,7 +61,7 @@ public class BitbucketSCMSourceIT {
     private static final String PROJECT_NAME = "Project 1";
 
     @Rule
-    public BitbucketJenkinsRule bbJenkinsRule = new BitbucketJenkinsRule();
+    public final BitbucketJenkinsRule bbJenkinsRule = new BitbucketJenkinsRule();
 
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();

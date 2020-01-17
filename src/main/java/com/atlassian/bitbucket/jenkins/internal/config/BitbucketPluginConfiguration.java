@@ -140,13 +140,13 @@ public class BitbucketPluginConfiguration extends GlobalConfiguration {
                             }
                         });
                 Jenkins.get().getAllItems(MultiBranchProject.class)
-                        .forEach(project -> processMultibranchProject(project, changedServerIds));
+                        .forEach(project -> processMultiBranchProject(project, changedServerIds));
             }
         }
     }
 
     @SuppressWarnings("unchecked")
-    private void processMultibranchProject(MultiBranchProject project, Set<String> changedServerIds) {
+    private void processMultiBranchProject(MultiBranchProject project, Set<String> changedServerIds) {
         List<SCMSource> sources = (List<SCMSource>) project.getSources().stream().map(scm -> {
             if (scm instanceof BitbucketSCMSource) {
                 BitbucketSCMSource src = (BitbucketSCMSource) scm;
@@ -159,7 +159,7 @@ public class BitbucketPluginConfiguration extends GlobalConfiguration {
         try {
             project.setSourcesList(sources);
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, String.format("Error updating configuration for MultibranchProject %s.",
+            LOGGER.log(Level.SEVERE, String.format("Error updating configuration for MultiBranchProject %s.",
                     project.getName()), e);
         }
     }

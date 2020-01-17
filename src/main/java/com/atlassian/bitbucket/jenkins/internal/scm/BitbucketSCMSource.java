@@ -72,7 +72,7 @@ public class BitbucketSCMSource extends SCMSource {
         Optional<BitbucketServerConfiguration> mayBeServerConf = descriptor.getConfiguration(serverId);
         if (!mayBeServerConf.isPresent()) {
             LOGGER.info("No Bitbucket Server configuration for serverId " + serverId);
-            setEmptyRepsitory(credentialsId, projectName, repositoryName, serverId, mirrorName);
+            setEmptyRepository(credentialsId, projectName, repositoryName, serverId, mirrorName);
             return;
         }
 
@@ -87,12 +87,12 @@ public class BitbucketSCMSource extends SCMSource {
                 descriptor.getBitbucketScmHelper(baseUrl, globalCredentialsProvider, credentialsId);
         if (isBlank(projectName)) {
             LOGGER.info("Error creating the Bitbucket SCM: The project name is blank");
-            setEmptyRepsitory(credentialsId, projectName, repositoryName, serverId, mirrorName);
+            setEmptyRepository(credentialsId, projectName, repositoryName, serverId, mirrorName);
             return;
         }
         if (isBlank(repositoryName)) {
             LOGGER.info("Error creating the Bitbucket SCM: The repository name is blank");
-            setEmptyRepsitory(credentialsId, projectName, repositoryName, serverId, mirrorName);
+            setEmptyRepository(credentialsId, projectName, repositoryName, serverId, mirrorName);
             return;
         }
 
@@ -110,7 +110,7 @@ public class BitbucketSCMSource extends SCMSource {
                                                 mirrorName));
                 setRepositoryDetails(credentialsId, serverId, mirroredRepository);
             } catch (MirrorFetchException ex) {
-                setEmptyRepsitory(credentialsId, projectName, repositoryName, serverId, mirrorName);
+                setEmptyRepository(credentialsId, projectName, repositoryName, serverId, mirrorName);
             }
         } else {
             BitbucketRepository localRepo = scmHelper.getRepository(projectName, repositoryName);
@@ -182,7 +182,9 @@ public class BitbucketSCMSource extends SCMSource {
     }
 
     @Override
-    protected void retrieve(@CheckForNull SCMSourceCriteria criteria, SCMHeadObserver observer, @CheckForNull SCMHeadEvent<?> event, TaskListener listener) throws IOException, InterruptedException {
+    protected void retrieve(@CheckForNull SCMSourceCriteria criteria, SCMHeadObserver observer,
+                            @CheckForNull SCMHeadEvent<?> event,
+                            TaskListener listener) throws IOException, InterruptedException {
         gitSCMSource.accessibleRetrieve(criteria, observer, event, listener);
     }
 
@@ -204,11 +206,11 @@ public class BitbucketSCMSource extends SCMSource {
     }
 
     @SuppressWarnings("Duplicates")
-    private void setEmptyRepsitory(@CheckForNull String credentialsId,
-                                   @CheckForNull String projectName,
-                                   @CheckForNull String repositoryName,
-                                   @CheckForNull String serverId,
-                                   @CheckForNull String mirrorName) {
+    private void setEmptyRepository(@CheckForNull String credentialsId,
+                                    @CheckForNull String projectName,
+                                    @CheckForNull String repositoryName,
+                                    @CheckForNull String serverId,
+                                    @CheckForNull String mirrorName) {
         projectName = Objects.toString(projectName, "");
         repositoryName = Objects.toString(repositoryName, "");
         mirrorName = Objects.toString(mirrorName, "");
@@ -433,7 +435,8 @@ public class BitbucketSCMSource extends SCMSource {
         }
 
         public void accessibleRetrieve(@CheckForNull SCMSourceCriteria criteria, SCMHeadObserver observer,
-                                       @CheckForNull SCMHeadEvent<?> event, TaskListener listener) throws IOException, InterruptedException {
+                                       @CheckForNull SCMHeadEvent<?> event,
+                                       TaskListener listener) throws IOException, InterruptedException {
             super.retrieve(criteria, observer, event, listener);
         }
 
