@@ -5,8 +5,10 @@ import com.atlassian.bitbucket.jenkins.internal.config.BitbucketPluginConfigurat
 import com.atlassian.bitbucket.jenkins.internal.config.BitbucketServerConfiguration;
 import com.atlassian.bitbucket.jenkins.internal.model.BitbucketWebhook;
 import com.atlassian.bitbucket.jenkins.internal.provider.JenkinsProvider;
+import com.atlassian.bitbucket.jenkins.internal.provider.JenkinsProviderModule;
 import com.atlassian.bitbucket.jenkins.internal.scm.BitbucketSCM;
 import com.atlassian.bitbucket.jenkins.internal.scm.BitbucketSCMRepository;
+import com.google.inject.Guice;
 import hudson.Extension;
 import hudson.model.CauseAction;
 import hudson.model.Item;
@@ -119,9 +121,8 @@ public class BitbucketWebhookTriggerImpl extends Trigger<Job<?, ?>>
         @Inject
         private RetryingWebhookHandler retryingWebhookHandler;
         @Inject
-        private JenkinsProvider jenkinsProvider;
-        @Inject
         private BitbucketPluginConfiguration bitbucketPluginConfiguration;
+        private transient JenkinsProvider jenkinsProvider;
 
         @SuppressWarnings("TransientFieldInNonSerializableClass")
         private final transient SequentialExecutionQueue queue;
@@ -154,6 +155,11 @@ public class BitbucketWebhookTriggerImpl extends Trigger<Job<?, ?>>
         @Override
         public Trigger<?> newInstance(@Nullable StaplerRequest req, @Nonnull JSONObject formData) throws FormException {
             return super.newInstance(req, formData);
+        }
+
+        @Inject
+        public void setJenkinsProvider(JenkinsProvider jenkinsProvider) {
+            this.jenkinsProvider = jenkinsProvider;
         }
 
         public void schedule(
@@ -194,6 +200,9 @@ public class BitbucketWebhookTriggerImpl extends Trigger<Job<?, ?>>
 
         private boolean webhookExists(Job<?, ?> project, BitbucketSCM input) {
             try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
+                if (jenkinsProvider == null) {
+                    Guice.createInjector(new JenkinsProviderModule()).injectMembers(this);
+                }
                 return jenkinsProvider
                         .get().getAllItems(ParameterizedJobMixIn.ParameterizedJob.class)
                         .stream()
