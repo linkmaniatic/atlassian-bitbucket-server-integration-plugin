@@ -1,11 +1,13 @@
 package com.atlassian.bitbucket.jenkins.internal.applink.oauth.serviceprovider.token;
 
+import com.atlassian.bitbucket.jenkins.internal.applink.oauth.Randomizer;
 import com.atlassian.bitbucket.jenkins.internal.applink.oauth.serviceprovider.exception.InvalidTokenException;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.net.URI;
@@ -18,24 +20,25 @@ import static com.atlassian.bitbucket.jenkins.internal.applink.oauth.util.TestDa
 import static java.lang.System.currentTimeMillis;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class RandomValueTokenFactoryTest {
 
+    @Mock
+    private Randomizer randomizer;
+
+    @InjectMocks
     private RandomValueTokenFactory tokenFactory;
 
-    private static TokenMatcher accessToken(URI callback, String consumerKey) {
-        return new TokenMatcher(callback, consumerKey, true);
+    private static TokenMatcher accessToken(URI callback, String consumerKey, String secret) {
+        return new TokenMatcher(true, callback, consumerKey, secret);
     }
 
-    private static TokenMatcher requestToken(URI callback, String consumerKey) {
-        return new TokenMatcher(callback, consumerKey, false);
-    }
-
-    @Before
-    public void setup() {
-        tokenFactory = new RandomValueTokenFactory();
+    private static TokenMatcher requestToken(URI callback, String consumerKey, String secret) {
+        return new TokenMatcher(false, callback, consumerKey, secret);
     }
 
     @Test
@@ -51,10 +54,12 @@ public class RandomValueTokenFactoryTest {
                 .authorizedBy(user)
                 .verifier("a1b2c3")
                 .build();
+        String tokenSecret = "test-token-secret";
+        when(randomizer.randomUrlSafeString(anyInt())).thenReturn(tokenSecret);
 
         ServiceProviderToken accessToken = tokenFactory.generateAccessToken(requestToken);
 
-        assertThat(accessToken, accessToken(callback, RSA_CONSUMER.getKey()));
+        assertThat(accessToken, accessToken(callback, RSA_CONSUMER.getKey(), tokenSecret));
     }
 
     @Test(expected = InvalidTokenException.class)
@@ -97,10 +102,12 @@ public class RandomValueTokenFactoryTest {
     @Test
     public void testGenerateRequestToken() {
         URI callback = URI.create("http://some-callback-url/endpoint");
+        String tokenSecret = "test-token-secret";
+        when(randomizer.randomUrlSafeString(anyInt())).thenReturn(tokenSecret);
 
         ServiceProviderToken requestToken = tokenFactory.generateRequestToken(RSA_CONSUMER, callback, null);
 
-        assertThat(requestToken, requestToken(callback, RSA_CONSUMER.getKey()));
+        assertThat(requestToken, requestToken(callback, RSA_CONSUMER.getKey(), tokenSecret));
     }
 
     @Test(expected = NullPointerException.class)
@@ -110,14 +117,16 @@ public class RandomValueTokenFactoryTest {
 
     private static final class TokenMatcher extends TypeSafeDiagnosingMatcher<ServiceProviderToken> {
 
+        private final boolean accessToken;
+        private final String secret;
         private final URI callback;
         private final String consumerKey;
-        private final boolean accessToken;
 
-        private TokenMatcher(URI callback, String consumerKey, boolean accessToken) {
+        private TokenMatcher(boolean accessToken, URI callback, String consumerKey, String secret) {
             this.callback = callback;
             this.consumerKey = consumerKey;
             this.accessToken = accessToken;
+            this.secret = secret;
         }
 
         @Override
@@ -128,7 +137,8 @@ public class RandomValueTokenFactoryTest {
                     .appendValue(callback)
                     .appendText(", consumer.key=")
                     .appendValue(consumerKey)
-                    .appendText(", secret is not blank")
+                    .appendText(", secret=")
+                    .appendValue(secret)
                     .appendText(", token value is not blank]");
         }
 
@@ -140,7 +150,7 @@ public class RandomValueTokenFactoryTest {
             }
             boolean matches = (accessToken ? token.isAccessToken() : token.isRequestToken()) &&
                     Objects.equals(callback, token.getCallback()) &&
-                    isNotBlank(token.getTokenSecret()) &&
+                    Objects.equals(secret, token.getTokenSecret()) &&
                     token.getConsumer() != null &&
                     Objects.equals(consumerKey, token.getConsumer().getKey()) &&
                     isNotBlank(token.getToken());

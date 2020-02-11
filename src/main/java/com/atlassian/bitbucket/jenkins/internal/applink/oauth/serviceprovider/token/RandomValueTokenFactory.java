@@ -1,23 +1,21 @@
 package com.atlassian.bitbucket.jenkins.internal.applink.oauth.serviceprovider.token;
 
+import com.atlassian.bitbucket.jenkins.internal.applink.oauth.Randomizer;
 import com.atlassian.bitbucket.jenkins.internal.applink.oauth.serviceprovider.consumer.Consumer;
 import com.atlassian.bitbucket.jenkins.internal.applink.oauth.serviceprovider.exception.InvalidTokenException;
 import net.oauth.OAuthMessage;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.net.URI;
-import java.security.SecureRandom;
-import java.util.Random;
 import java.util.logging.Logger;
 
 import static com.atlassian.bitbucket.jenkins.internal.applink.oauth.serviceprovider.token.ServiceProviderToken.newAccessToken;
 import static com.atlassian.bitbucket.jenkins.internal.applink.oauth.serviceprovider.token.ServiceProviderToken.newRequestToken;
 import static java.lang.System.currentTimeMillis;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
-import static org.apache.commons.codec.binary.Base64.encodeBase64;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
@@ -35,7 +33,12 @@ public class RandomValueTokenFactory implements TokenFactory {
 
     private static final Logger log = Logger.getLogger(RandomValueTokenFactory.class.getName());
 
-    private final Random random = new SecureRandom();
+    private final Randomizer randomizer;
+
+    @Inject
+    public RandomValueTokenFactory(Randomizer randomizer) {
+        this.randomizer = randomizer;
+    }
 
     @Override
     public ServiceProviderToken generateAccessToken(ServiceProviderToken requestToken) {
@@ -57,7 +60,7 @@ public class RandomValueTokenFactory implements TokenFactory {
                 .callback(requestToken.getCallback())
                 .consumer(requestToken.getConsumer())
                 .creationTime(currentTimeMillis())
-                .tokenSecret(generateRandomString(TOKEN_SECRET_LENGTH_BYTES))
+                .tokenSecret(randomizer.randomUrlSafeString(TOKEN_SECRET_LENGTH_BYTES))
                 .authorizedBy(requestToken.getUser())
                 .verifier(requestToken.getVerifier())
                 .session(newSession(requestToken))
@@ -71,19 +74,13 @@ public class RandomValueTokenFactory implements TokenFactory {
                 .callback(callback)
                 .consumer(consumer)
                 .creationTime(currentTimeMillis())
-                .tokenSecret(generateRandomString(TOKEN_SECRET_LENGTH_BYTES))
+                .tokenSecret(randomizer.randomUrlSafeString(TOKEN_SECRET_LENGTH_BYTES))
                 .build();
-    }
-
-    private String generateRandomString(int lengthInBytes) {
-        byte[] secretBytes = new byte[lengthInBytes];
-        random.nextBytes(secretBytes);
-        return new String(encodeBase64(secretBytes), UTF_8);
     }
 
     private ServiceProviderToken.Session newSession(ServiceProviderToken token) {
         ServiceProviderToken.Session.Builder builder =
-                ServiceProviderToken.Session.newSession(generateRandomString(ACCESS_TOKEN_SESSION_LENGTH_BYTES));
+                ServiceProviderToken.Session.newSession(randomizer.randomUrlSafeString(ACCESS_TOKEN_SESSION_LENGTH_BYTES));
         if (token.getSession() != null) {
             builder.creationTime(token.getSession().getCreationTime());
         }
